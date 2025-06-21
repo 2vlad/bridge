@@ -1,0 +1,22 @@
+{
+  "name": "lightphone-claude-bridge",
+  "version": "1.0.0",
+  "description": "A bridge to connect Light Phone notes with Claude AI.",
+  "main": "bridge.js",
+  "scripts": {
+    "start": "node bridge.js"
+  },
+  "keywords": [
+    "lightphone",
+    "claude",
+    "automation",
+    "puppeteer"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "puppeteer": "^22.12.1"
+  }
+} 
