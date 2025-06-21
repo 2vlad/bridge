@@ -2,11 +2,17 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
+const fs = require('fs');
 const config = require('./config');
 const usersService = require('./services/users');
 const logger = require('./services/logger');
 const auth = require('./middlewares/auth');
 const worker = require('./worker');
+
+// --- Убедимся, что папка для данных существует ---
+if (!fs.existsSync(config.usersFile.substring(0, config.usersFile.lastIndexOf('/')))) {
+  fs.mkdirSync(config.usersFile.substring(0, config.usersFile.lastIndexOf('/')), { recursive: true });
+}
 
 const app = express();
 
