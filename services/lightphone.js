@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const { logEvent } = require('./logger');
 
 const SELECTORS = {
@@ -17,8 +17,19 @@ async function processUserNotes(user, handleNote) {
   const { lightPhoneEmail, lightPhonePassword, deviceUrl, trigger = '<' } = settings;
   const sessionPath = `./session/${userId}`; // User-specific session
 
+  const launchOptions = {
+    headless: true,
+    args: ['--no-sandbox'],
+    userDataDir: sessionPath
+  };
+
+  // В продакшн-среде (на Railway) используем предустановленный Chromium
+  if (process.env.NODE_ENV === 'production') {
+    launchOptions.executablePath = '/usr/bin/chromium-browser';
+  }
+
   logEvent(userId, 'lp:start', { message: 'Launching browser' });
-  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'], userDataDir: sessionPath });
+  const browser = await puppeteer.launch(launchOptions);
   const page = await browser.newPage();
   try {
     logEvent(userId, 'lp:navigate:login', { message: `Navigating to ${deviceUrl}` });
