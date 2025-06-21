@@ -23,7 +23,7 @@ export default function LoginPage() {
         </div>
 
         {/* Login Button */}
-        <div className="space-y-4">
+        {/* <div className="space-y-4">
           <Button
             onClick={handleLogin}
             variant="outline"
@@ -32,7 +32,7 @@ export default function LoginPage() {
             <LogIn className="w-4 h-4 mr-2" />
             Continue with Google
           </Button>
-        </div>
+        </div> */}
 
         {/* Footer */}
         <p className="text-xs text-gray-500 text-center">Service is free and in beta.</p>
