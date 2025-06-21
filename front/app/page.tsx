@@ -26,8 +26,14 @@ export default function LoginPage() {
       localStorage.setItem("token", data.token)
       router.push("/settings")
     } else {
-      const data = await res.json().catch(() => ({}))
-      setError(data.message || "Error")
+      let errorMessage = "An unknown error occurred.";
+      try {
+        const data = await res.json();
+        errorMessage = data.message || JSON.stringify(data);
+      } catch (e) {
+        errorMessage = await res.text();
+      }
+      setError(errorMessage);
     }
   }
 
