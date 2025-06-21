@@ -4,15 +4,22 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useRouter } from "next/navigation"
 
 export default function SettingsPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [status, setStatus] = useState<"idle" | "connected" | "error">("idle")
+  const router = useRouter()
 
   const handleSave = () => {
     // Simulate save action
     setStatus("connected")
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    router.push('/')
   }
 
   return (
@@ -21,7 +28,7 @@ export default function SettingsPage() {
       <header className="border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-black">Light Phone AI</h1>
-          <Button variant="outline" size="sm" className="bg-white text-black border-gray-300 hover:bg-gray-50">
+          <Button variant="outline" size="sm" className="bg-white text-black border-gray-300 hover:bg-gray-50" onClick={handleLogout}>
             Logout
           </Button>
         </div>
