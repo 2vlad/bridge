@@ -2,6 +2,7 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { usersFile, jwtSecret } = require('../config');
+const { logEvent } = require('./logger');
 
 function readUsers() {
   if (!fs.existsSync(usersFile)) return [];
@@ -28,6 +29,7 @@ function createUser({ email, password, name }) {
   const user = { id, email, password: hash, name, settings: {}, created: new Date().toISOString() };
   users.push(user);
   writeUsers(users);
+  logEvent(user.id, 'user:created', { message: `User ${email} created` });
   return user;
 }
 
@@ -37,6 +39,7 @@ function updateUser(id, data) {
   if (idx === -1) throw new Error('User not found');
   users[idx] = { ...users[idx], ...data };
   writeUsers(users);
+  logEvent(id, 'user:updated', { message: `User ${id} updated` });
   return users[idx];
 }
 

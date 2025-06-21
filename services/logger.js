@@ -14,14 +14,16 @@ function writeLogs(logs) {
 
 function logEvent(userId, action, data = {}) {
   const logs = readLogs();
-  logs.push({
+  const logEntry = {
     timestamp: new Date().toISOString(),
     userId,
     action,
     result: data.result,
     message: data.message,
-  });
+  };
+  logs.push(logEntry);
   writeLogs(logs);
+  console.log(JSON.stringify(logEntry));
 }
 
 module.exports = {

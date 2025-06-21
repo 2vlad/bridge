@@ -7,22 +7,26 @@ const { workerInterval } = require('./config');
 let intervalId = null;
 
 async function processAllUsers() {
-  console.log('Worker: Starting processing cycle...');
-  const users = readUsers().filter(u => 
+  logEvent(null, 'worker:cycle:start');
+  const allUsers = readUsers();
+  const usersToProcess = allUsers.filter(u => 
     u.settings?.lightPhoneEmail && u.settings?.claudeApiKey
   );
 
-  for (const user of users) {
+  logEvent(null, 'worker:scan', { message: `Found ${allUsers.length} total users. Processing ${usersToProcess.length}.` });
+
+  for (const user of usersToProcess) {
     try {
-      console.log(`Worker: Processing user ${user.id}`);
-      await processUserNotes(user.settings, async ({ title, text, page, editor }) => {
-        // Проверяем, есть ли уже ответ
-        if (text.includes('---')) return false;
+      logEvent(user.id, 'worker:user:start', { message: `Processing user ${user.email}` });
+      await processUserNotes(user, async ({ title, text, page, editor }) => {
+        if (text.includes('---')) {
+            logEvent(user.id, 'worker:note:skipped', { message: `Note "${title}" already processed.` });
+            return false;
+        }
 
         const prompt = text.replace(user.settings.trigger || '<', '').trim();
-        const claudeResponse = await askClaude({
+        const claudeResponse = await askClaude(user, {
           prompt,
-          apiKey: user.settings.claudeApiKey,
           systemPrompt: 'Ответь максимально кратко, 3-4 предложения. Если вопрос на русском, но латиницей, ответь на русском.'
         });
 
@@ -30,26 +34,26 @@ async function processAllUsers() {
         await page.evaluate((el, content) => el.value = content, editor, newText);
         
         logEvent(user.id, 'note_processed', { result: 'success', message: `Note "${title}" processed.` });
-        return true; // Обновляем заметку
+        return true;
       });
+      logEvent(user.id, 'worker:user:success', { message: `Successfully processed user ${user.email}` });
     } catch (error) {
-      console.error(`Worker: Error processing user ${user.id}:`, error.message);
-      logEvent(user.id, 'note_processed', { result: 'error', message: error.message });
+      logEvent(user.id, 'worker:user:fail', { result: 'error', message: error.message, stack: error.stack });
     }
   }
-  console.log('Worker: Processing cycle finished.');
+  logEvent(null, 'worker:cycle:end');
 }
 
 function start() {
   if (intervalId) return;
-  console.log(`Worker: Started, will run every ${workerInterval / 1000}s`);
-  processAllUsers(); // Запускаем сразу
+  logEvent(null, 'worker:start', { message: `Worker started, will run every ${workerInterval / 1000}s` });
+  processAllUsers();
   intervalId = setInterval(processAllUsers, workerInterval);
 }
 
 function stop() {
   if (!intervalId) return;
-  console.log('Worker: Stopped.');
+  logEvent(null, 'worker:stop');
   clearInterval(intervalId);
   intervalId = null;
 }
