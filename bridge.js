@@ -11,7 +11,7 @@ const config = {
     claudeApiKey: process.env.CLAUDE_API_KEY,
     claudeModel: 'claude-3-sonnet-20240229', // Updated to a more common Sonnet model
     pollInterval: 60000, // Check every 60 seconds
-    headless: false, // Set to true for production, false for debugging
+    headless: true, // Railway: headless only
     triggerPrefixes: ['<', '>'], // Поддержка обоих знаков
     apiRateLimit: 60000, // 1 minute
     dryRun: false, // If true, don't edit notes, just log actions
@@ -75,7 +75,8 @@ async function main() {
     console.log('Launching browser...');
     const browser = await puppeteer.launch({
         headless: config.headless,
-        userDataDir: path.join(__dirname, 'session') // This line enables session persistence
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        userDataDir: './session',
     });
     const page = await browser.newPage();
 
