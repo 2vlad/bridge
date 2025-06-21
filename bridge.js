@@ -269,7 +269,22 @@ async function handleSingleNote(page, noteHandle, noteId, promptSnippet) {
     let claudeResponse;
     try {
         lastApiCallTimestamp = Date.now();
-        claudeResponse = await getClaudeResponse(prompt, config.claudeApiKey, config.claudeModel);
+        // Определяем язык и формируем systemPrompt
+        let systemPrompt = 'Ответь максимально кратко, 3-4 предложения.';
+        // Проверка: если вопрос написан латиницей, но по-русски (например, translit)
+        // Примитивная эвристика: если есть много латинских букв, но встречаются слова из русского словаря
+        // Более надёжно: если prompt содержит только латиницу, но похож на русские слова (например, privet, kak dela)
+        // Для простоты: если prompt содержит только латиницу, но не похож на английский (нет типичных английских слов)
+        // Здесь просто: если prompt содержит только латиницу, но не похож на английский вопрос, просим ответить на русском
+        const isLatin = /^[a-zA-Z0-9\s.,?!:;"'\-()]+$/.test(prompt);
+        const commonRusTranslit = ['privet', 'kak', 'dela', 'spasibo', 'pochemu', 'zachem', 'kogda', 'gde', 'kto', 'chto', 'pochemu', 'kuda', 'otkuda', 'skolko', 'pochemu', 'zdes', 'eto', 'vot', 'esli', 'kakoy', 'kakaya', 'kakoe', 'kakie', 'kak', 'pochemu', 'zachem', 'kuda', 'otkuda', 'skolko', 'kogda', 'gde', 'kto', 'chto', 'pochemu', 'zdes', 'eto', 'vot', 'esli'];
+        if (isLatin) {
+            const lowerPrompt = prompt.toLowerCase();
+            if (commonRusTranslit.some(word => lowerPrompt.includes(word))) {
+                systemPrompt += ' Если вопрос написан латиницей, но по-русски, ответь на русском языке.';
+            }
+        }
+        claudeResponse = await getClaudeResponse(prompt, config.claudeApiKey, config.claudeModel, { systemPrompt });
         console.log('Received response from Claude.');
     } catch (error) {
         console.error('Error from Claude API:', error.message);
