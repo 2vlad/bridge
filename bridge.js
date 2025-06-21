@@ -9,7 +9,7 @@ const config = {
     lightPhoneEmail: process.env.LIGHT_PHONE_EMAIL,
     lightPhonePassword: process.env.LIGHT_PHONE_PASSWORD,
     claudeApiKey: process.env.CLAUDE_API_KEY,
-    claudeModel: 'claude-3-sonnet-20240229', // Updated to a more common Sonnet model
+    claudeModel: 'claude-3-sonnet-20240229', // Claude 3 Sonnet (Sonnet 4)
     pollInterval: 60000, // Check every 60 seconds
     headless: true, // Railway: headless only
     triggerPrefixes: ['<', '>'], // Поддержка обоих знаков
