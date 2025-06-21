@@ -11,16 +11,15 @@ const axios = require('axios');
  */
 async function getClaudeResponse(userMessage, apiKey, model, options = {}) {
     try {
-        const messages = [];
-        if (options.systemPrompt) {
-            messages.push({ role: 'system', content: options.systemPrompt });
-        }
-        messages.push({ role: 'user', content: userMessage });
-        const response = await axios.post('https://api.anthropic.com/v1/messages', {
+        const body = {
             model: model,
             max_tokens: 1500,
-            messages
-        }, {
+            messages: [{ role: 'user', content: userMessage }]
+        };
+        if (options.systemPrompt) {
+            body.system = options.systemPrompt;
+        }
+        const response = await axios.post('https://api.anthropic.com/v1/messages', body, {
             headers: {
                 'Content-Type': 'application/json',
                 'x-api-key': apiKey,
