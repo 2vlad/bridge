@@ -1,7 +1,7 @@
 const config = require('./optimized-config');
 const { readUsers } = require('./services/users');
 const { logEvent, logMemoryUsage } = require('./services/logger');
-const { processUserNotesOptimized } = require('./services/lightphone-optimized');
+const { OptimizedLightPhoneService } = require('./services/lightphone-optimized');
 const { StateManager } = require('./services/state-manager');
 const { IntervalManager } = require('./services/interval-manager');
 
@@ -9,6 +9,7 @@ class OptimizedWorker {
   constructor() {
     this.stateManager = new StateManager(config.cacheFile);
     this.intervalManager = new IntervalManager(config);
+    this.lightPhoneService = new OptimizedLightPhoneService(config.puppeteer);
     this.isRunning = false;
     this.timeoutId = null;
     this.stats = {
@@ -105,10 +106,29 @@ class OptimizedWorker {
       this.stats.totalChecks++;
       
       const allUsers = readUsers();
+      
+      // Создаем виртуального пользователя из переменных окружения если настоящих нет
+      if (allUsers.length === 0 || !allUsers.some(u => u.settings?.lightPhoneEmail)) {
+        if (process.env.LIGHT_PHONE_EMAIL && process.env.LIGHT_PHONE_PASSWORD && process.env.CLAUDE_API_KEY) {
+          console.log('📧 Используем данные из переменных окружения');
+          const envUser = {
+            id: 'env-user',
+            email: process.env.LIGHT_PHONE_EMAIL,
+            settings: {
+              lightPhoneEmail: process.env.LIGHT_PHONE_EMAIL,
+              lightPhonePassword: process.env.LIGHT_PHONE_PASSWORD,
+              claudeApiKey: process.env.CLAUDE_API_KEY,
+              trigger: '<'
+            }
+          };
+          allUsers.push(envUser);
+        }
+      }
+      
       const activeUsers = allUsers.filter(u => 
         u.settings?.lightPhoneEmail && 
-        u.settings?.claudeApiKey &&
-        u.settings?.deviceUrl
+        u.settings?.lightPhonePassword &&
+        (u.settings?.claudeApiKey || process.env.CLAUDE_API_KEY)
       );
 
       if (activeUsers.length === 0) {
@@ -129,16 +149,35 @@ class OptimizedWorker {
             message: `Начало проверки пользователя ${user.email}` 
           });
 
-          const result = await processUserNotesOptimized(user);
+          // Добавляем Claude API ключ если его нет в настройках пользователя
+          if (!user.settings.claudeApiKey && process.env.CLAUDE_API_KEY) {
+            user.settings.claudeApiKey = process.env.CLAUDE_API_KEY;
+          }
           
-          if (result.notesProcessed > 0) {
-            totalNotesProcessed += result.notesProcessed;
+          logEvent(user.id, 'user:config', { 
+            message: 'Конфигурация пользователя',
+            hasEmail: !!user.settings?.lightPhoneEmail,
+            hasPassword: !!user.settings?.lightPhonePassword,
+            hasClaudeKey: !!user.settings?.claudeApiKey,
+            userSource: user.id === 'env-user' ? 'environment' : 'database'
+          });
+
+          const result = await this.lightPhoneService.checkNotes(user);
+          
+          if (result.success && result.processedCount > 0) {
+            totalNotesProcessed += result.processedCount;
             hasNewActivity = true;
-            this.stats.notesProcessed += result.notesProcessed;
+            this.stats.notesProcessed += result.processedCount;
             
             logEvent(user.id, 'user:check:success', { 
-              message: `Обработано ${result.notesProcessed} заметок`,
-              notesProcessed: result.notesProcessed
+              message: `Обработано ${result.processedCount} заметок`,
+              notesProcessed: result.processedCount,
+              notesFound: result.notes.length
+            });
+          } else if (result.success) {
+            logEvent(user.id, 'user:check:empty', { 
+              message: `Проверка завершена, новых заметок не найдено`,
+              notesFound: result.notes.length
             });
           }
           
