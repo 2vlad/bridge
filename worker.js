@@ -27,7 +27,7 @@ async function processAllUsers() {
         const prompt = text.replace(user.settings.trigger || '<', '').trim();
         const claudeResponse = await askClaude(user, {
           prompt,
-          systemPrompt: 'Ответь максимально кратко, 3-4 предложения. Если вопрос на русском, но латиницей, ответь на русском.'
+          systemPrompt: 'Если вопрос на русском, но латиницей, ответь на русском.'
         });
 
         const newText = `${text}\n\n---\n\n${claudeResponse}`;

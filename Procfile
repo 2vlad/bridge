@@ -1,1 +1,1 @@
-start: node bridge.js 
+web: npm run start:optimized 

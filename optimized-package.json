@@ -1,0 +1,60 @@
+{
+  "name": "lightphone-claude-bridge-optimized",
+  "version": "2.0.0",
+  "description": "Оптимизированная версия Light Phone + Claude Bridge с динамическими интервалами и управлением памяти",
+  "main": "optimized-main.js",
+  "scripts": {
+    "start": "node optimized-main.js",
+    "dev": "NODE_ENV=development node optimized-main.js",
+    "prod": "NODE_ENV=production node optimized-main.js",
+    "server": "node server.js",
+    "test:config": "node -e 'console.log(JSON.stringify(require(\"./optimized-config\"), null, 2))'",
+    "test:memory": "node -e 'const { logMemoryUsage } = require(\"./services/logger\"); logMemoryUsage(\"test\");'",
+    "logs": "tail -f data/logs.json | jq -r '.timestamp + \" \" + .action + \": \" + .message'",
+    "clean:cache": "rm -f data/cache.json",
+    "clean:logs": "rm -f data/logs.json",
+    "clean:session": "rm -rf session/",
+    "clean:all": "npm run clean:cache && npm run clean:logs && npm run clean:session",
+    "stats": "node -e 'const { readLogs } = require(\"./services/logger\"); const logs = readLogs(); console.log(\"Записей в логе:\", logs.length); const memory = logs.filter(l => l.action === \"memory:usage\"); console.log(\"Записей памяти:\", memory.length);'",
+    "monitor": "watch -n 30 'ps aux | grep node && echo \"\" && tail -5 data/logs.json | jq -r \".timestamp + \\\" \\\" + .action + \\\": \\\" + .message\"'"
+  },
+  "keywords": [
+    "lightphone",
+    "claude",
+    "automation",
+    "puppeteer",
+    "optimized",
+    "memory-efficient"
+  ],
+  "author": "Optimized Bridge",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "puppeteer-core": "^21.0.0",
+    "axios": "^1.5.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0"
+  },
+  "devDependencies": {
+    "jq": "^1.7.3"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-repo/lightphone-claude-optimized"
+  },
+  "optimizedFeatures": {
+    "dynamicIntervals": "5-20 минут в зависимости от активности",
+    "nightMode": "Увеличенные интервалы ночью",
+    "browserLifecycle": "Браузер закрывается после каждой проверки",
+    "memoryOptimization": "Агрессивные настройки Puppeteer",
+    "resourceBlocking": "Блокировка изображений и аналитики",
+    "stateManagement": "Персистентное кеширование состояния",
+    "healthMonitoring": "Детальная телеметрия и health checks"
+  }
+} 

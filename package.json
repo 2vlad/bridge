@@ -5,7 +5,11 @@
   "main": "bridge.js",
   "scripts": {
     "start": "node server.js",
+    "start:optimized": "OPTIMIZED_MODE=true node server.js",
     "dev": "node server.js",
+    "dev:optimized": "OPTIMIZED_MODE=true NODE_ENV=development node server.js",
+    "worker:optimized": "node optimized-main.js",
+    "test:optimized": "node test-optimizations.js",
     "dev:frontend": "cd front && npm run dev",
     "build:frontend": "cd front && npm run build",
     "install:all": "npm install && cd front && npm install --legacy-peer-deps"

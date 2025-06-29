@@ -7,7 +7,9 @@ const config = require('./config');
 const usersService = require('./services/users');
 const logger = require('./services/logger');
 const auth = require('./middlewares/auth');
-const worker = require('./worker');
+// Проверяем, запускать ли оптимизированный режим
+const useOptimized = process.env.OPTIMIZED_MODE === 'true' || process.argv.includes('--optimized');
+const worker = useOptimized ? require('./optimized-main') : require('./worker');
 
 // --- Убедимся, что папка для данных существует ---
 if (!fs.existsSync(config.usersFile.substring(0, config.usersFile.lastIndexOf('/')))) {
@@ -98,6 +100,78 @@ app.get('/api/logs', auth, (req, res) => {
 
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 
+// --- Оптимизированные API endpoints ---
+app.get('/api/optimized/stats', auth, (req, res) => {
+  if (!useOptimized || !global.optimizedWorker) {
+    return res.status(404).json({ message: 'Оптимизированный режим не активен' });
+  }
+  
+  const stats = global.optimizedWorker.getStats();
+  res.json(stats);
+});
+
+app.get('/api/optimized/intervals', auth, (req, res) => {
+  if (!useOptimized || !global.optimizedWorker) {
+    return res.status(404).json({ message: 'Оптимизированный режим не активен' });
+  }
+  
+  const state = global.optimizedWorker.stateManager.getState();
+  const intervalStats = global.optimizedWorker.intervalManager.getIntervalStatistics(state);
+  const nextChecks = global.optimizedWorker.intervalManager.simulateNextIntervals(state, 5);
+  const suggestions = global.optimizedWorker.intervalManager.getOptimizationSuggestions(state);
+  
+  res.json({
+    current: intervalStats,
+    nextChecks,
+    suggestions
+  });
+});
+
+app.get('/api/optimized/memory', auth, (req, res) => {
+  const currentMemory = process.memoryUsage();
+  const memoryMB = {
+    rss: Math.round(currentMemory.rss / 1024 / 1024),
+    heapUsed: Math.round(currentMemory.heapUsed / 1024 / 1024),
+    heapTotal: Math.round(currentMemory.heapTotal / 1024 / 1024),
+    external: Math.round(currentMemory.external / 1024 / 1024)
+  };
+  
+  // Получаем историю памяти из логов
+  const memoryLogs = logger.readLogs()
+    .filter(log => log.action === 'memory:usage')
+    .slice(-20)
+    .map(log => ({
+      timestamp: log.timestamp,
+      context: log.context,
+      memory: log.memory
+    }));
+  
+  res.json({
+    current: memoryMB,
+    history: memoryLogs,
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.post('/api/optimized/cleanup', auth, async (req, res) => {
+  if (!useOptimized || !global.optimizedWorker) {
+    return res.status(404).json({ message: 'Оптимизированный режим не активен' });
+  }
+  
+  try {
+    const cleaned = await global.optimizedWorker.stateManager.cleanup();
+    res.json({ 
+      message: `Очищено ${cleaned} записей`,
+      cleaned 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Ошибка очистки',
+      error: error.message 
+    });
+  }
+});
+
 
 // --- Frontend ---
 // Раздаём статику из папки front (для Next.js build)
@@ -119,14 +193,32 @@ app.use((err, req, res, next) => {
 // --- Server & Worker ---
 const server = app.listen(config.port, () => {
   console.log(`Server listening on port ${config.port}`);
-  worker.start();
+  if (useOptimized) {
+    console.log('🚀 Запуск в оптимизированном режиме');
+    // Для оптимизированного режима worker запускается отдельно
+    if (worker.main) {
+      worker.main().catch(console.error);
+    }
+  } else {
+    console.log('📊 Запуск в стандартном режиме');
+    worker.start();
+  }
 });
 
 // --- Graceful shutdown ---
 process.on('SIGINT', () => {
   console.log('SIGINT signal received: closing HTTP server');
-  worker.stop();
-  server.close(() => {
-    console.log('HTTP server closed');
-  });
+  
+  if (useOptimized && global.optimizedWorker) {
+    global.optimizedWorker.stop().then(() => {
+      server.close(() => {
+        console.log('HTTP server closed');
+      });
+    });
+  } else {
+    worker.stop();
+    server.close(() => {
+      console.log('HTTP server closed');
+    });
+  }
 }); 
